@@ -25,10 +25,31 @@ export class RoomRepositoryImplement implements RoomRepository {
     return this.roomModel.findById(_id).populate('users').exec();
   }
 
-  join(room_id: string, user_id: string): Promise<Room> {
+  join(_id: string, user_id: string): Promise<Room> {
     return this.roomModel
-      .findByIdAndUpdate(room_id, { $push: { users: user_id } }, { new: true })
+      .findByIdAndUpdate(_id, { $push: { users: user_id } }, { new: true })
       .populate('users')
+      .exec();
+  }
+
+  leave(_id: string, user_id: string): Promise<Room> {
+    return this.roomModel
+      .findByIdAndUpdate(_id, { $pull: { users: user_id } }, { new: true })
+      .populate('users')
+      .exec();
+  }
+
+  delete(_id: string): Promise<Room> {
+    return this.roomModel.findByIdAndDelete(_id).exec();
+  }
+
+  findMyRoom(user_id: string): Promise<Room> {
+    return this.roomModel
+      .findOne({
+        users: {
+          user_id,
+        },
+      })
       .exec();
   }
 }

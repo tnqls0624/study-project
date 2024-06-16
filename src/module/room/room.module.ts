@@ -22,5 +22,6 @@ const controller = [RoomController];
   ],
   controllers: [...controller],
   providers: [...services, ...infrastructure],
+  exports: [...services],
 })
 export class RoomModule {}

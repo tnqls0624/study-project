@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   OnGatewayConnection,
@@ -11,9 +11,29 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from '../service/chat.service';
+import { CACHE_GENERATOR } from 'src/lib/cache.module';
+import { RoomService } from 'src/module/room/service/room.service';
+
+export enum Action {
+  CONNECT = 'CONNECT',
+  JOIN = 'JOIN',
+  LEAVE = 'LEAVE',
+  DISCONNECT = 'DISCONNECT',
+  SEND_MESSAGE = 'SEND_MESSAGE',
+}
+
+export interface ConnectAction {
+  user_id: string;
+}
 
 export interface JoinRoomAction {
   room: string;
+  user: string;
+}
+
+export interface LeaveRoomAction {
+  room: string;
+  user: string;
 }
 
 export interface SendMessageAction {
@@ -31,7 +51,11 @@ export interface SendMessageAction {
 export class ChatGateway
   implements OnGatewayConnection, OnGatewayInit, OnGatewayDisconnect
 {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly roomService: RoomService,
+    @Inject(CACHE_GENERATOR) private readonly cacheGenerator: CACHE_GENERATOR,
+  ) {}
   private logger = new Logger(ChatGateway.name);
 
   @WebSocketServer()
@@ -41,41 +65,94 @@ export class ChatGateway
     this.logger.log(`Socket Server Init Complete`);
   }
 
-  async handleConnection(@ConnectedSocket() client: Socket) {
+  async handleConnection(@ConnectedSocket() client: Socket): Promise<void> {
     client.emit('connect-message', `${client.id}`);
     this.logger.log(`${client.id}가 연결되었습니다`);
   }
 
-  async handleDisconnect(@ConnectedSocket() client: Socket) {
-    this.logger.log(`${client.id}가 연결이 끊겼습니다`);
+  async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
+    this.logger.log(`${client.id}님이 연결이 끊겼습니다`);
+
+    const user_id = (await this.cacheGenerator.getCache(
+      `SOCKET:${client.id}`,
+    )) as string;
+    await this.cacheGenerator.delCache(`SOCKET:${client.id}`);
+
+    const room = await this.roomService.findMyRoom(user_id);
+    await this.roomService.leave(String(room._id), user_id);
+
+    const disconnect_data = {
+      type: Action.DISCONNECT,
+      socket: client.id,
+      room: String(room._id),
+      user: user_id,
+    };
+
+    this.server.to(String(room._id)).emit('receive-message', disconnect_data);
+  }
+
+  @SubscribeMessage('connect')
+  async connectEvent(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: ConnectAction,
+  ): Promise<void> {
+    const connect_data = {
+      type: Action.CONNECT,
+      socket: client.id,
+      user_id: data.user_id,
+    };
+    client.emit('receive-message', connect_data);
+
+    await this.cacheGenerator.setCache(`SOCKET:${client.id}`, data.user_id, 0);
   }
 
   @SubscribeMessage('join-room')
   async joinRoomEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinRoomAction,
-  ) {
-    this.logger.log(`${data.room} 에 입장~`);
-    client.join(`${data.room}`);
-    client.emit('join-room', `{${data.room} 에 입장~`);
+  ): Promise<void> {
+    const join_data = {
+      type: Action.JOIN,
+      room: data.room,
+      user: data.user,
+      socket: client.id,
+    };
+
+    client.join(data.room);
+    this.server.to(data.room).emit('receive-message', join_data);
+    this.logger.log(`${client.id}님이 ${data.room} 방에 입장 했습니다.`);
   }
 
   @SubscribeMessage('leave-room')
   async leaveRoomEvent(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: JoinRoomAction,
-  ) {
+    @MessageBody() data: LeaveRoomAction,
+  ): Promise<void> {
+    const leave_data = {
+      type: Action.LEAVE,
+      room: data.room,
+      user: data.user,
+      socket: client.id,
+    };
+
     client.leave(data.room);
-    client.emit('leave-room', `${data.room} 에 퇴장`);
-    this.logger.log(`${data.room} 에 퇴장`);
+    this.server.to(data.room).emit('receive-message', leave_data);
+    this.logger.log(`${client.id}님이 ${data.room} 방에 퇴장 했습니다.`);
   }
 
   @SubscribeMessage('send-message')
   async sendMessageEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SendMessageAction,
-  ) {
-    this.server.to(`${data.room}`).emit('receive-message', data.content);
+  ): Promise<void> {
+    const message_data = {
+      type: Action.SEND_MESSAGE,
+      room: data.room,
+      user: data.user,
+      socket: client.id,
+      content: data.content,
+    };
+    this.server.to(data.room).emit('receive-message', message_data);
     this.chatService.mqttMessageSend(data);
     this.logger.debug(`${data.content}`);
   }

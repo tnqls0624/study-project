@@ -7,4 +7,7 @@ export interface RoomRepository {
   findAll(): Promise<Room[]>;
   findById(_id: string): Promise<Room>;
   join(_id: string, user_id: string): Promise<Room>;
+  leave(_id: string, user_id: string): Promise<Room>;
+  delete(_id: string): Promise<Room>;
+  findMyRoom(user_id: string): Promise<Room>;
 }

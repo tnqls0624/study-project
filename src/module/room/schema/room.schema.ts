@@ -14,6 +14,11 @@ export class Room {
   title: string;
 
   @Prop({
+    type: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
+  })
+  master: Types.ObjectId;
+
+  @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }],
     default: [],
   })

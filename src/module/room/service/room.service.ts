@@ -24,17 +24,27 @@ export class RoomService {
     user: UserDto,
     body: CreateRoomRequestDto,
   ): Promise<RoomResponseDto> {
-    const room = await this.roomRepository.create(user, body);
-    return plainToInstance(RoomResponseDto, room, {
-      excludeExtraneousValues: true,
-    });
+    try {
+      const room = await this.roomRepository.create(user, body);
+      return plainToInstance(RoomResponseDto, room, {
+        excludeExtraneousValues: true,
+      });
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
   }
 
   async findAll(): Promise<RoomResponseDto[]> {
-    const rooms = await this.roomRepository.findAll();
-    return plainToInstance(RoomResponseDto, rooms, {
-      excludeExtraneousValues: true,
-    });
+    try {
+      const rooms = await this.roomRepository.findAll();
+      return plainToInstance(RoomResponseDto, rooms, {
+        excludeExtraneousValues: true,
+      });
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
   }
 
   findById(_id: string): Promise<Room> {
@@ -52,6 +62,30 @@ export class RoomService {
       return plainToInstance(RoomResponseDto, join_room, {
         excludeExtraneousValues: true,
       });
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
+  }
+
+  async leave(_id: string, user_id: string): Promise<Room> {
+    try {
+      const room = await this.roomRepository.leave(_id, user_id);
+      if (!room.users.some((user) => user === new Types.ObjectId(user_id))) {
+        await this.roomRepository.delete(_id);
+      }
+
+      // 룸 방장 나갈때 업데이트 어떻게 할것인가? 생각 필요
+      return room;
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
+  }
+
+  async findMyRoom(user_id: string): Promise<Room> {
+    try {
+      return await this.roomRepository.findMyRoom(user_id);
     } catch (e) {
       this.logger.error(e);
       return e;

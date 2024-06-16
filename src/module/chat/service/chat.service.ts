@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ChatRepository } from '../interface/chat.repository';
 import { Message } from '../controller/chat.controller';
 
@@ -13,6 +13,7 @@ import {
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
   private client: ClientProxy;
   constructor(
     @Inject('CHAT_REPOSITORY')
@@ -21,29 +22,44 @@ export class ChatService {
     this.client = ClientProxyFactory.create({
       transport: Transport.MQTT,
       options: {
-        url: 'mqtt://localhost:1883', // MQTT 브로커 URL
+        url: `${process.env.MQTT_PROTOCOL}://localhost:1883`, // MQTT 브로커 URL
       },
     });
   }
 
-  async mqttMessageSend(data: Message): Promise<boolean> {
-    const message_data = {
-      room: new mongoose.Types.ObjectId(data.room),
-      user: new mongoose.Types.ObjectId(data.user),
-      content: data.content,
-    };
-    this.client.emit('message:save', message_data);
-    return true;
+  mqttMessageSend(data: Message): boolean {
+    try {
+      const message_data = {
+        room: new mongoose.Types.ObjectId(data.room),
+        user: new mongoose.Types.ObjectId(data.user),
+        content: data.content,
+      };
+      this.client.emit('message:save', message_data);
+      return true;
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
   }
 
   async create(data: Message) {
-    await this.chatRepository.create(data);
+    try {
+      await this.chatRepository.create(data);
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
   }
 
   async findRoomMessage(_id: string): Promise<RoomMessageResponseDto[]> {
-    const messages = await this.chatRepository.findMessageByRoomId(_id);
-    return plainToInstance(RoomMessageResponseDto, messages, {
-      excludeExtraneousValues: true,
-    });
+    try {
+      const messages = await this.chatRepository.findMessageByRoomId(_id);
+      return plainToInstance(RoomMessageResponseDto, messages, {
+        excludeExtraneousValues: true,
+      });
+    } catch (e) {
+      this.logger.error(e);
+      return e;
+    }
   }
 }
