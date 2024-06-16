@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -31,7 +32,7 @@ export class RoomService {
       });
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -43,7 +44,7 @@ export class RoomService {
       });
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -64,7 +65,7 @@ export class RoomService {
       });
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -79,7 +80,7 @@ export class RoomService {
       return room;
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -88,7 +89,7 @@ export class RoomService {
       return await this.roomRepository.findMyRoom(user_id);
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 }

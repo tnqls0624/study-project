@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -40,7 +41,7 @@ export class UserService {
       return true;
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -67,11 +68,11 @@ export class UserService {
           expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME,
         },
       );
-      this.cacheGenerator.setCache(`token:${user._id}`, access_token, 0);
+      await this.cacheGenerator.setCache(`token:${user._id}`, access_token, 0);
       return access_token;
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -83,7 +84,7 @@ export class UserService {
       });
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 }

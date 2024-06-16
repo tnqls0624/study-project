@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ChatRepository } from '../interface/chat.repository';
 import { Message } from '../controller/chat.controller';
 
@@ -38,7 +38,7 @@ export class ChatService {
       return true;
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -47,7 +47,7 @@ export class ChatService {
       await this.chatRepository.create(data);
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 
@@ -59,7 +59,7 @@ export class ChatService {
       });
     } catch (e) {
       this.logger.error(e);
-      return e;
+      throw new HttpException(e, e.status);
     }
   }
 }

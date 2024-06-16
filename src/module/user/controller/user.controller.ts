@@ -14,7 +14,7 @@ import { UserDto } from '../dto/user.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @ApiOperation({ summary: 'Create a User' })
-  @Post('/create-user')
+  @Post('/sign-up')
   async create(@Body() body: CreateUserRequestDto) {
     return this.userService.create(body);
   }
