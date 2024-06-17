@@ -30,6 +30,14 @@ export class RoomController {
     return this.roomService.findAll();
   }
 
+  @ApiOperation({ summary: 'Find My Room' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('/my')
+  async findMy(@User() user: UserDto) {
+    return this.roomService.findMyRoom(user._id);
+  }
+
   @ApiOperation({ summary: 'Join Room' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

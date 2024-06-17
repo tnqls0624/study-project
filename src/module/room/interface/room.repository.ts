@@ -9,5 +9,5 @@ export interface RoomRepository {
   join(_id: string, user_id: string): Promise<Room>;
   leave(_id: string, user_id: string): Promise<Room>;
   delete(_id: string): Promise<Room>;
-  findMyRoom(user_id: string): Promise<Room>;
+  findMyRoom(_id: string): Promise<Room>;
 }

@@ -23,7 +23,7 @@ export enum Action {
 }
 
 export interface ConnectAction {
-  user_id: string;
+  _id: string;
 }
 
 export interface JoinRoomAction {
@@ -73,25 +73,24 @@ export class ChatGateway
   async handleDisconnect(@ConnectedSocket() client: Socket): Promise<void> {
     this.logger.log(`${client.id}님이 연결이 끊겼습니다`);
 
-    const user_id = (await this.cacheGenerator.getCache(
+    const _id = (await this.cacheGenerator.getCache(
       `SOCKET:${client.id}`,
     )) as string;
     await this.cacheGenerator.delCache(`SOCKET:${client.id}`);
-
-    const room = await this.roomService.findMyRoom(user_id);
-    await this.roomService.leave(String(room._id), user_id);
-
+    const room = await this.roomService.findMyRoom(_id);
+    const room_id = String(room._id);
     const disconnect_data = {
       type: Action.DISCONNECT,
       socket: client.id,
-      room: String(room._id),
-      user: user_id,
+      room: room_id,
+      user: _id,
     };
 
     this.server.to(String(room._id)).emit('receive-message', disconnect_data);
+    await this.roomService.leave(room_id, _id);
   }
 
-  @SubscribeMessage('connect')
+  @SubscribeMessage('connecting')
   async connectEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: ConnectAction,
@@ -99,11 +98,12 @@ export class ChatGateway
     const connect_data = {
       type: Action.CONNECT,
       socket: client.id,
-      user_id: data.user_id,
+      _id: data._id,
     };
     client.emit('receive-message', connect_data);
 
-    await this.cacheGenerator.setCache(`SOCKET:${client.id}`, data.user_id, 0);
+    await this.cacheGenerator.setCache(`SOCKET:${client.id}`, data._id, 0);
+    this.logger.log(`SOCKET:${client.id} Connect`);
   }
 
   @SubscribeMessage('join-room')

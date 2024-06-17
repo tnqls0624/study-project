@@ -43,12 +43,10 @@ export class RoomRepositoryImplement implements RoomRepository {
     return this.roomModel.findByIdAndDelete(_id).exec();
   }
 
-  findMyRoom(user_id: string): Promise<Room> {
+  findMyRoom(_id: string): Promise<Room> {
     return this.roomModel
       .findOne({
-        users: {
-          user_id,
-        },
+        users: [_id],
       })
       .exec();
   }

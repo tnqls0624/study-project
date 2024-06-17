@@ -25,9 +25,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: Payload) {
     const { _id } = payload;
-    const is_valid = await this.cacheGenerator.getCache(`token:${_id}`);
-    if (!is_valid) throw new UnauthorizedException();
+    // const is_valid = await this.cacheGenerator.getCache(`token:${_id}`);
+    // if (!is_valid) throw new UnauthorizedException();
     const user = await this.userRepository.findById(_id);
-    return user;
+    return {
+      _id: String(user._id),
+      user_id: user.user_id,
+      name: user.name,
+    };
   }
 }

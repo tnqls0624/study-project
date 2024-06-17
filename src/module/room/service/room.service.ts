@@ -75,8 +75,6 @@ export class RoomService {
       if (!room.users.some((user) => user === new Types.ObjectId(user_id))) {
         await this.roomRepository.delete(_id);
       }
-
-      // 룸 방장 나갈때 업데이트 어떻게 할것인가? 생각 필요
       return room;
     } catch (e) {
       this.logger.error(e);
@@ -84,9 +82,9 @@ export class RoomService {
     }
   }
 
-  async findMyRoom(user_id: string): Promise<Room> {
+  async findMyRoom(_id: string): Promise<Room> {
     try {
-      return await this.roomRepository.findMyRoom(user_id);
+      return this.roomRepository.findMyRoom(_id);
     } catch (e) {
       this.logger.error(e);
       throw new HttpException(e, e.status);
