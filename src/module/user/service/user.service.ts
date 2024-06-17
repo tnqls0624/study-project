@@ -58,7 +58,6 @@ export class UserService {
 
       if (!password_confirm)
         throw new BadRequestException('Password Incorrect');
-
       const access_token = await this.jwtService.signAsync(
         {
           _id: user._id,

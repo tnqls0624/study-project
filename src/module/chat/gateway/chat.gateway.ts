@@ -39,6 +39,7 @@ export interface LeaveRoomAction {
 export interface SendMessageAction {
   room: string;
   user: string;
+  name: string;
   content: string;
 }
 
@@ -78,16 +79,19 @@ export class ChatGateway
     )) as string;
     await this.cacheGenerator.delCache(`SOCKET:${client.id}`);
     const room = await this.roomService.findMyRoom(_id);
-    const room_id = String(room._id);
-    const disconnect_data = {
-      type: Action.DISCONNECT,
-      socket: client.id,
-      room: room_id,
-      user: _id,
-    };
 
-    this.server.to(String(room._id)).emit('receive-message', disconnect_data);
-    await this.roomService.leave(room_id, _id);
+    if (room) {
+      const room_id = String(room._id);
+      const disconnect_data = {
+        type: Action.DISCONNECT,
+        socket: client.id,
+        room: room_id,
+        user: _id,
+      };
+
+      this.server.to(String(room._id)).emit('receive-message', disconnect_data);
+      await this.roomService.leave(room_id, _id);
+    }
   }
 
   @SubscribeMessage('connecting')
@@ -145,10 +149,12 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SendMessageAction,
   ): Promise<void> {
+    console.log(data);
     const message_data = {
       type: Action.SEND_MESSAGE,
       room: data.room,
       user: data.user,
+      name: data.name,
       socket: client.id,
       content: data.content,
     };
